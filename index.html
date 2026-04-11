@@ -1,0 +1,164 @@
+<!--
+⚠️ Avertissement : Pur "Vibecoding" Inside
+Note au lecteur : Ce projet est le fruit d'un pur vibecoding. Il a été codé à l'instinct, itéré rapidement "au feeling", sans framework lourd ni architecture complexe planifiée sur 6 mois. C'est du brut, c'est fonctionnel, ça va droit au but dans un seul fichier. Si vous cherchez des tests unitaires et une architecture MVC stricte, vous n'êtes pas au bon endroit. Si vous cherchez un outil qui marche direct dans le navigateur, bienvenue !
+
+Déclaration de non-responsabilité :
+Ce projet est fourni "tel quel", sans garantie d'aucune sorte, expresse ou implicite. L'auteur décline toute responsabilité en cas de bug, de panne, de perte de données, de mauvais usage, ou de tout dommage direct ou indirect pouvant résulter de l'utilisation de ce code. L'utilisateur assume l'entière responsabilité de son utilisation, de ses modifications et de son intégration dans un autre environnement.
+
+Licence :
+Ce projet est distribué sous la licence MIT. Vous êtes libre de l'utiliser, de le modifier, de le partager et de le redistribuer selon les conditions de la licence choisie.
+📖 Comment fonctionne ce code ?
+Ce fichier est une Single Page Application (SPA) 100% Vanilla. Cela signifie qu'il n'y a aucune dépendance externe (pas de React, Vue, ou de bibliothèques JS lourdes). Tout — la structure, le design et le moteur — est contenu dans ce projet.
+Son objectif principal est de transformer un fichier texte brut (une liste Markdown "Awesome" hébergée sur GitHub) en une interface graphique moderne, triable et interactive.
+
+Structure du projet :
+  index.html  — Structure HTML (ce fichier)
+  style.css   — Tous les styles CSS
+  app.js      — Toute la logique JavaScript
+-->
+<!DOCTYPE html>
+<html lang="en" translate="yes">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD-Board</title>
+
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https:; img-src 'self' data: https:;">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- Feuille de styles -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loading">
+  <div id="loading-box">
+    <div class="spinner"></div>
+    <div id="loading-title">Initialisation…</div>
+    <div id="loading-sub">Prêt à charger un dépôt</div>
+  </div>
+</div>
+
+<div id="error-screen">
+  <p>Impossible de charger la liste depuis GitHub.<br>Vérifiez votre connexion et rechargez.</p>
+  <button class="btn" onclick="location.reload()" style="margin-top:8px">↺ Réessayer</button>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <h3>Nouvelle collection</h3>
+    <input type="text" id="modal-name" placeholder="Nom de la collection…" maxlength="30">
+    <div class="color-picker" id="color-picker"></div>
+    <div id="modal-actions">
+      <button id="modal-cancel">Annuler</button>
+      <button id="modal-confirm">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div id="repo-modal-overlay">
+  <div id="repo-modal">
+    <h3>Ajouter un dépôt</h3>
+    <p class="repo-modal-sub">Entrez l'URL brute d'un fichier README.md sur GitHub (ou tout autre fichier Markdown).</p>
+    <label>URL du dépôt ou du README</label>
+    <input type="text" id="repo-modal-url" placeholder="https://github.com/user/repo">
+    <label>Nom affiché</label>
+    <input type="text" id="repo-modal-name" placeholder="Mon dépôt">
+    <div class="repo-modal-hint">✦ Vous pouvez coller directement l'URL GitHub normale — elle sera convertie automatiquement en URL brute.</div>
+    <div id="repo-modal-actions">
+      <button id="repo-modal-cancel">Annuler</button>
+      <button id="repo-modal-confirm">Ajouter &amp; charger</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <span class="sidebar-label">Vues</span>
+      <button class="sidebar-btn active" id="sb-all">Tous les outils <span class="sb-count" id="sb-all-count">0</span></button>
+      <button class="sidebar-btn" id="sb-seen">Vus <span class="sb-count" id="sb-seen-count">0</span></button>
+      <button class="sidebar-btn" id="sb-unseen">Non vus <span class="sb-count" id="sb-unseen-count">0</span></button>
+      <button class="sidebar-btn" id="sb-rated">Notés <span class="sb-count" id="sb-rated-count">0</span></button>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Collections</span>
+      <div id="coll-list"></div>
+      <button id="btn-new-coll">Nouvelle collection</button>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Dépôts</span>
+      <div id="repo-list"></div>
+      <div id="repo-loading"><div class="spinner-sm"></div><span id="repo-loading-text">Chargement…</span></div>
+      <button id="btn-new-repo">+ Ajouter un dépôt</button>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">
+      <button class="btn" id="btn-export" disabled style="width:100%; justify-content:center; margin-bottom:6px" title="Ajoutez d'abord un dépôt pour pouvoir exporter">Exporter</button>
+      <button class="btn" id="btn-import" style="width:100%; justify-content:center">Importer</button>
+      <!-- [FIX 3] : accept limité à .json ET application/json pour double vérification navigateur -->
+      <input type="file" id="file-input" accept=".json,application/json" style="display:none">
+      <div id="save-indicator">✓ Sauvegardé</div>
+    </div>
+  </div>
+
+  <div id="main-area">
+    <div id="header">
+      <div id="header-top">
+        <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap">MD-Board<em style="color:var(--text3);font-style:normal">/</em>catalog</div>
+        <div id="search-wrap">
+          <svg id="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="search" type="text" placeholder="Rechercher un outil…" autocomplete="off">
+        </div>
+        <div id="header-actions">
+          <div id="progress-wrap"><div id="progress-bar"><div id="progress-fill"></div></div><span id="progress-label">0%</span><span id="seen-count" style="color:var(--text3)">0 vus</span></div>
+          <button class="btn" id="btn-hide-seen">Masquer vus</button>
+          <button id="btn-theme" title="Changer le thème">☀︎</button>
+        </div>
+      </div>
+      <div id="filters">
+        <select id="sel-cat"><option value="">Toutes les catégories</option></select>
+        <select id="sel-rating">
+          <option value="">Toutes les notes</option>
+          <option value="5">★★★★★ — 5 étoiles</option>
+          <option value="4">★★★★ — 4 et +</option>
+          <option value="3">★★★ — 3 et +</option>
+          <option value="1">Tous les notés</option>
+          <option value="unrated">Non notés</option>
+        </select>
+        <select id="sel-sort">
+          <option value="">Ordre original</option>
+          <option value="name">Nom A → Z</option>
+          <option value="name-desc">Nom Z → A</option>
+          <option value="rating-desc">Meilleures notes</option>
+        </select>
+        <div id="view-toggle">
+          <button class="view-btn active" id="vb-grid">Grille</button>
+          <button class="view-btn" id="vb-cat">Catégories</button>
+        </div>
+        <span id="count-badge"></span>
+      </div>
+    </div>
+    <div id="main">
+      <!-- [FIX 1] : Écran affiché quand aucun dépôt n'est chargé -->
+      <div id="empty-repo">
+        <div class="er-icon">⊟</div>
+        <h2>Aucun dépôt chargé</h2>
+        <p>Ajoutez un dépôt Markdown depuis GitHub pour commencer à explorer son contenu.</p>
+        <button class="btn" id="btn-new-repo-empty">+ Ajouter un dépôt</button>
+      </div>
+      <div id="grid"></div>
+      <div id="empty"><div class="ico">⊘</div><p>Aucun résultat.</p></div>
+      <div id="load-more-wrap" style="display:none"><button id="load-more">Afficher plus</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Script principal -->
+<script src="app.js"></script>
+</body>
+</html>
