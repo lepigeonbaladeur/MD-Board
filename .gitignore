@@ -1,4 +1,4 @@
-# Dépendances (si tu utilises npm ou yarn plus tard)
+# Dépendances
 node_modules/
 jspm_packages/
 
@@ -21,7 +21,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Dossiers de build (si tu utilises un bundler)
+# Dossiers de build
 dist/
 out/
 build/
