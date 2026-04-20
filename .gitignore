@@ -1,0 +1,31 @@
+# Dépendances (si tu utilises npm ou yarn plus tard)
+node_modules/
+jspm_packages/
+
+# Fichiers système (important sur Fedora/Linux)
+.DS_Store
+Thumbs.db
+*~
+*.swp
+.fuse_hidden*
+.directory
+
+# Dossiers d'IDE / Editeurs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dossiers de build (si tu utilises un bundler)
+dist/
+out/
+build/
+
+# Fichiers de configuration locale (clés d'API, etc.)
+.env
+.env.local
